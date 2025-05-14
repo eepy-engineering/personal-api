@@ -31,7 +31,7 @@ struct User {
 
 pub async fn run(config: &Arc<Config>) {
   let config = config.clone();
-  let Some(ref last_fm_key) = config.last_fm_key else {
+  let Some(last_fm_key) = &config.last_fm_key else {
     return;
   };
 
@@ -79,6 +79,8 @@ pub async fn run(config: &Arc<Config>) {
       perform_update().await
     }
   });
+
+  tracing::info!("started last.fm fetcher");
 }
 
 #[derive(Deserialize)]

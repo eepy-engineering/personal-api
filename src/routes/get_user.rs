@@ -9,18 +9,21 @@ use axum::{
 use serde::Serialize;
 
 use crate::{
-  fetchers::{discord, last_fm},
+  fetchers::{discord, last_fm, steam},
   host_config::HandlerConfig,
 };
 
 use super::MinimalUser;
 
 #[derive(Serialize)]
-pub struct UserAggregate {
-  name: String,
+pub struct UserAggregate<'a> {
+  name: &'a String,
   owners: Vec<MinimalUser>,
+  aliases: &'a Vec<String>,
+  pronouns: &'a Vec<String>,
   discord: Option<discord::SimpleUserPresence>,
   last_fm: Option<last_fm::UserInfo>,
+  steam: Option<steam::SteamUserInfo>,
 }
 
 pub async fn get_user(
@@ -32,18 +35,21 @@ pub async fn get_user(
   };
 
   Json(UserAggregate {
-    name: user.name.clone(),
+    name: &user.name,
     owners: user
       .owner_usernames
       .iter()
       .filter_map(|username| MinimalUser::from_username(&handler_config.config, &username))
       .collect(),
+    aliases: &user.aliases,
+    pronouns: &user.pronouns,
     discord: user.discord_id.and_then(discord::fetch_user_presence),
     last_fm: user
       .last_fm_username
       .as_ref()
       .map(String::as_str)
       .and_then(last_fm::fetch_lastfm_info),
+    steam: user.steam_id.and_then(steam::get_user_info),
   })
   .into_response()
 }

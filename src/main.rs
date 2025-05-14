@@ -29,6 +29,7 @@ async fn main() -> anyhow::Result<()> {
 
   fetchers::discord::run_discord_bot(&config).await?;
   fetchers::last_fm::run(&config).await;
+  fetchers::steam::run(&config).await;
 
   let handler_config = Arc::new(HandlerConfig::new(&config));
   let middleware = middleware::from_fn_with_state(handler_config.clone(), host_rerouter);

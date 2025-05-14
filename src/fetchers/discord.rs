@@ -37,6 +37,8 @@ pub async fn run_discord_bot(config: &Config) -> anyhow::Result<()> {
     }
   });
 
+  tracing::info!("started discord fetcher");
+
   Ok(())
 }
 
