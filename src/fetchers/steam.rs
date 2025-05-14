@@ -8,17 +8,18 @@ use futures::TryFutureExt;
 use serde::Serialize;
 use serenity::json::Value;
 use steam_rs::{Steam, steam_id::SteamId};
+use ts_rs::TS;
 
 use crate::config::Config;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 pub struct SteamUserInfo {
   steam_id: String,
   persona_name: String,
   game: Option<SteamGameInfo>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
 pub struct SteamGameInfo {
   appid: u64,
   name: String,

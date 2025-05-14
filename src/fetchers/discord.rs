@@ -12,6 +12,7 @@ use serenity::all::{
   GatewayIntents, GuildMembersChunkEvent, OnlineStatus, Presence, Ready,
 };
 use tracing::info;
+use ts_rs::TS;
 
 use crate::config::Config;
 
@@ -42,9 +43,10 @@ pub async fn run_discord_bot(config: &Config) -> anyhow::Result<()> {
   Ok(())
 }
 
-static USERS: LazyLock<RwLock<HashMap<u64, SimpleUserPresence>>> = LazyLock::new(Default::default);
+static USERS: LazyLock<RwLock<HashMap<u64, DiscordUserInfo>>> = LazyLock::new(Default::default);
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, TS)]
+#[ts(rename = "DiscordEmoji")]
 pub enum Emoji {
   Official {
     name: String,
@@ -61,30 +63,50 @@ pub enum Emoji {
     animated: Option<bool>,
   },
 }
-#[derive(Clone, Serialize)]
+
+#[derive(Clone, Serialize, TS)]
+#[ts(rename = "DiscordCustomStatus")]
 pub struct CustomStatus {
   emoji: Option<Emoji>,
   text: Option<String>,
 }
 
-#[derive(Clone, Serialize)]
-pub struct SimpleUserPresence {
+#[allow(unused)]
+#[derive(Serialize, TS)]
+#[ts(rename = "DiscordOnlineStatus")]
+pub enum TypescriptOnlineStatus {
+  #[serde(rename = "dnd")]
+  DoNotDisturb,
+  #[serde(rename = "idle")]
+  Idle,
+  #[serde(rename = "invisible")]
+  Invisible,
+  #[serde(rename = "offline")]
+  Offline,
+  #[serde(rename = "online")]
+  Online,
+}
+
+#[derive(Clone, Serialize, TS)]
+pub struct DiscordUserInfo {
   display_name: String,
+  #[ts(as = "TypescriptOnlineStatus")]
   status: OnlineStatus,
+  #[ts(as = "Option<TypescriptOnlineStatus>")]
   client_status: Option<ClientStatus>,
   custom_status: Option<CustomStatus>,
 }
 
-pub fn fetch_user_presence(user_id: u64) -> Option<SimpleUserPresence> {
+pub fn fetch_user_info(user_id: u64) -> Option<DiscordUserInfo> {
   USERS.read().unwrap().get(&user_id).cloned()
 }
 
 struct Handler(Vec<u64>);
 
-async fn build_simple_presence(
+async fn build_user_info(
   ctx: &impl CacheHttp,
   presence: Presence,
-) -> Option<SimpleUserPresence> {
+) -> Option<DiscordUserInfo> {
   let display_name = if let Some(user) = ctx.cache().and_then(|cache| cache.user(presence.user.id))
   {
     user.display_name().to_owned()
@@ -134,7 +156,7 @@ async fn build_simple_presence(
     })
   });
 
-  Some(SimpleUserPresence {
+  Some(DiscordUserInfo {
     display_name: display_name.to_owned(),
     status: presence.status,
     client_status: presence.client_status,
@@ -162,7 +184,7 @@ impl EventHandler for Handler {
 
   async fn presence_update(&self, ctx: Context, presence: Presence) {
     let user_id = presence.user.id;
-    if let Some(presence) = build_simple_presence(&ctx, presence).await {
+    if let Some(presence) = build_user_info(&ctx, presence).await {
       USERS.write().unwrap().insert(user_id.into(), presence);
     }
   }

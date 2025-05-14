@@ -5,6 +5,7 @@ use axum::{
   response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::{
   fetchers::{discord, last_fm, steam},
@@ -13,14 +14,15 @@ use crate::{
 
 use super::MinimalUser;
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
+#[ts(export, rename = "User")]
 pub struct UserAggregate<'a> {
   name: &'a str,
   owners: Vec<MinimalUser>,
   aliases: &'a Vec<String>,
   pronouns: &'a Vec<String>,
   time_zone: &'a str,
-  discord: Option<discord::SimpleUserPresence>,
+  discord: Option<discord::DiscordUserInfo>,
   last_fm: Option<last_fm::UserInfo>,
   steam: Option<steam::SteamUserInfo>,
 }
@@ -43,7 +45,7 @@ pub async fn get_user(
     aliases: &user.aliases,
     pronouns: &user.pronouns,
     time_zone: &user.time_zone,
-    discord: user.discord_id.and_then(discord::fetch_user_presence),
+    discord: user.discord_id.and_then(discord::fetch_user_info),
     last_fm: user
       .last_fm_username
       .as_ref()

@@ -1,4 +1,5 @@
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::config::Config;
 
@@ -7,7 +8,7 @@ pub mod get_user;
 pub mod get_users;
 pub mod root;
 
-#[derive(Serialize)]
+#[derive(Serialize, TS)]
 struct MinimalUser {
   username: String,
   name: String,

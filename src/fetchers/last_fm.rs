@@ -5,15 +5,52 @@ use std::{
 };
 
 use futures::{FutureExt, future::join_all};
-use lastfm::track::NowPlayingTrack;
+use lastfm::{artist::Artist, imageset::ImageSet, track::NowPlayingTrack};
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::config::Config;
 
-#[derive(Clone, Serialize)]
+#[allow(unused)]
+#[derive(Serialize, TS)]
+#[ts(rename = "LastFmImageSet")]
+pub struct TypescriptImageSet {
+  pub small: Option<String>,
+  pub medium: Option<String>,
+  pub large: Option<String>,
+  pub extralarge: Option<String>,
+}
+
+#[allow(unused)]
+#[derive(Serialize, TS)]
+#[ts(rename = "LastFmArtist")]
+pub struct TypescriptArtist {
+  #[ts(as = "TypescriptImageSet")]
+  pub image: ImageSet,
+  pub name: String,
+  pub url: String,
+}
+
+#[allow(unused)]
+#[derive(Serialize, TS)]
+#[ts(rename = "LastFmTrack")]
+pub struct TypescriptNowPlayingTrack {
+  #[ts(as = "TypescriptArtist")]
+  pub artist: Artist,
+  pub name: String,
+  #[ts(as = "TypescriptImageSet")]
+  pub image: ImageSet,
+  pub album: String,
+  pub url: String,
+}
+
+#[derive(Clone, Serialize, TS)]
+#[ts(rename = "LastFmUserInfo")]
 pub struct UserInfo {
   username: String,
+  #[ts(as = "Option<TypescriptNowPlayingTrack>")]
   currently_playing: Option<NowPlayingTrack>,
+  // todo: start time on now playing track
 }
 
 static PLAYING_TRACKS: LazyLock<RwLock<HashMap<String, UserInfo>>> =
@@ -29,7 +66,6 @@ struct User {
 }
 
 pub async fn run(config: &'static Config) {
-  let config = config;
   let Some(last_fm_key) = &config.last_fm_key else {
     return;
   };

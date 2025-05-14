@@ -22,15 +22,18 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        toolchain = fenix.packages.${system}.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
-        };
-        craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
+        releaseTarget = "x86_64-unknown-linux-musl";
+        craneLib = (crane.mkLib pkgs).overrideToolchain (pkgs.fenix.combine [
+          pkgs.fenix.minimal.rustc
+          pkgs.fenix.minimal.cargo
+          pkgs.fenix.targets.${releaseTarget}.latest.rust-std
+        ]);
         commonArgs = {
           src = pkgs.lib.sources.cleanSourceWith {
             src = ./.;
-            filter = orig_path: type: baseNameOf orig_path == "initial_steam_games.json"
+            filter = orig_path: type:
+              baseNameOf orig_path
+              == "initial_steam_games.json"
               || craneLib.filterCargoSources orig_path type;
             name = "source";
           };
@@ -38,6 +41,8 @@
         };
         crate = craneLib.buildPackage (commonArgs
           // {
+            CARGO_BUILD_TARGET = releaseTarget;
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
             cargoArtifacts = craneLib.buildDepsOnly commonArgs;
           });
       in
@@ -45,7 +50,7 @@
           formatter = alejandra;
           devShells.default = mkShell rec {
             buildInputs = [
-              toolchain
+              pkgs.fenix.stable.completeToolchain
             ];
           };
 
