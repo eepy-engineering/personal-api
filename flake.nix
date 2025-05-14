@@ -28,7 +28,12 @@
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
         commonArgs = {
-          src = craneLib.cleanCargoSource ./.;
+          src = pkgs.lib.sources.cleanSourceWith {
+            src = ./.;
+            filter = orig_path: type: baseNameOf orig_path == "initial_steam_games.json"
+              || craneLib.filterCargoSources orig_path type;
+            name = "source";
+          };
           strictDeps = true;
         };
         crate = craneLib.buildPackage (commonArgs
