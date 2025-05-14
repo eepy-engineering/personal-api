@@ -1,0 +1,21 @@
+[package]
+name = "personal-api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+async-trait = "0.1.88"
+axum = { version = "0.8.4", features = ["macros"] }
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
+futures = "0.3.31"
+replace_with = "0.1.7"
+reqwest = { version = "0.12.15", features = ["json", "rustls-tls", "http2", "charset", "macos-system-configuration"], default-features = false }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serenity = "0.12.4"
+tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread", "net", "sync"] }
+toml = "0.8.22"
+tower = "0.5.2"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
