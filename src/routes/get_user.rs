@@ -17,10 +17,11 @@ use super::MinimalUser;
 
 #[derive(Serialize)]
 pub struct UserAggregate<'a> {
-  name: &'a String,
+  name: &'a str,
   owners: Vec<MinimalUser>,
   aliases: &'a Vec<String>,
   pronouns: &'a Vec<String>,
+  time_zone: &'a str,
   discord: Option<discord::SimpleUserPresence>,
   last_fm: Option<last_fm::UserInfo>,
   steam: Option<steam::SteamUserInfo>,
@@ -43,6 +44,7 @@ pub async fn get_user(
       .collect(),
     aliases: &user.aliases,
     pronouns: &user.pronouns,
+    time_zone: &user.time_zone,
     discord: user.discord_id.and_then(discord::fetch_user_presence),
     last_fm: user
       .last_fm_username

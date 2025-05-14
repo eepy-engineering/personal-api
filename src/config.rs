@@ -21,6 +21,7 @@ pub struct UserConfig {
   pub owner_usernames: Vec<String>,
   pub aliases: Vec<String>,
   pub pronouns: Vec<String>,
+  pub time_zone: String,
   pub domain: Option<String>,
 
   pub discord_id: Option<u64>,
