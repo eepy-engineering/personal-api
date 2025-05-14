@@ -103,10 +103,7 @@ pub fn fetch_user_info(user_id: u64) -> Option<DiscordUserInfo> {
 
 struct Handler(Vec<u64>);
 
-async fn build_user_info(
-  ctx: &impl CacheHttp,
-  presence: Presence,
-) -> Option<DiscordUserInfo> {
+async fn build_user_info(ctx: &impl CacheHttp, presence: Presence) -> Option<DiscordUserInfo> {
   let display_name = if let Some(user) = ctx.cache().and_then(|cache| cache.user(presence.user.id))
   {
     user.display_name().to_owned()

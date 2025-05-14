@@ -1,21 +1,13 @@
-mod caching;
 mod config;
 mod fetchers;
 mod host_config;
-mod host_rerouter;
+mod middleware;
 mod routes;
 
 use std::fs::read_to_string;
 
-use axum::{
-  Router, ServiceExt,
-  handler::Handler,
-  middleware::{self},
-  routing::get,
-};
-use caching::age_caching;
+use axum::{Router, ServiceExt, handler::Handler, middleware as mw, routing::get};
 use host_config::HandlerConfig;
-use host_rerouter::host_rerouter;
 use routes::{
   get_host_user::get_host_user, get_user::get_user, get_users::get_users, root::root_page,
 };
@@ -35,25 +27,26 @@ async fn main() -> anyhow::Result<()> {
   fetchers::steam::run(&config).await;
 
   let handler_config = &*Box::leak(Box::new(HandlerConfig::new(&config)));
-  let middleware = middleware::from_fn_with_state(handler_config, host_rerouter);
+  let middleware = mw::from_fn_with_state(handler_config, middleware::host_rerouter);
 
   let app = Router::new()
     .route(
       "/",
-      get(root_page.layer(middleware::from_fn_with_state(259200, age_caching))),
+      get(root_page.layer(mw::from_fn_with_state(259200, middleware::age_caching))),
     )
     .route(
       "/users",
-      get(get_users.layer(middleware::from_fn_with_state(60, age_caching))),
+      get(get_users.layer(mw::from_fn_with_state(60, middleware::age_caching))),
     )
     .route(
       "/user",
-      get(get_host_user.layer(middleware::from_fn_with_state(10, age_caching))),
+      get(get_host_user.layer(mw::from_fn_with_state(10, middleware::age_caching))),
     )
     .route(
       "/user/{user}",
-      get(get_user.layer(middleware::from_fn_with_state(10, age_caching))),
+      get(get_user.layer(mw::from_fn_with_state(10, middleware::age_caching))),
     )
+    .layer(mw::from_fn(middleware::cors))
     .with_state(handler_config);
 
   let middleware = middleware.layer(app);
