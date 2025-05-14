@@ -1,16 +1,19 @@
+mod caching;
 mod config;
 mod fetchers;
-pub mod host_config;
+mod host_config;
 mod host_rerouter;
-pub mod routes;
+mod routes;
 
 use std::fs::read_to_string;
 
 use axum::{
   Router, ServiceExt,
+  handler::Handler,
   middleware::{self},
   routing::get,
 };
+use caching::age_caching;
 use host_config::HandlerConfig;
 use host_rerouter::host_rerouter;
 use routes::{
@@ -35,10 +38,22 @@ async fn main() -> anyhow::Result<()> {
   let middleware = middleware::from_fn_with_state(handler_config, host_rerouter);
 
   let app = Router::new()
-    .route("/", get(root_page))
-    .route("/users", get(get_users))
-    .route("/user", get(get_host_user))
-    .route("/user/{user}", get(get_user))
+    .route(
+      "/",
+      get(root_page.layer(middleware::from_fn_with_state(259200, age_caching))),
+    )
+    .route(
+      "/users",
+      get(get_users.layer(middleware::from_fn_with_state(60, age_caching))),
+    )
+    .route(
+      "/user",
+      get(get_host_user.layer(middleware::from_fn_with_state(10, age_caching))),
+    )
+    .route(
+      "/user/{user}",
+      get(get_user.layer(middleware::from_fn_with_state(10, age_caching))),
+    )
     .with_state(handler_config);
 
   let middleware = middleware.layer(app);
