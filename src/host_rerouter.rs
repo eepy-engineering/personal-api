@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
   extract::{Request, State},
   http::Uri,
@@ -38,7 +36,7 @@ fn rewrite_uri(uri: Uri) -> Uri {
 }
 
 pub async fn host_rerouter(
-  State(host_state): State<Arc<HandlerConfig>>,
+  State(host_state): State<&'static HandlerConfig>,
   Host(host): Host,
   mut request: Request,
   next: Next,

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
   debug_handler,
   extract::{Path, State},
@@ -13,11 +11,11 @@ use super::get_user::get_user;
 
 #[debug_handler]
 pub async fn get_host_user(
-  State(host_config): State<Arc<HandlerConfig>>,
+  State(host_config): State<&'static HandlerConfig>,
   Host(host): Host,
 ) -> Response {
   get_user(
-    State(host_config.clone()),
+    State(host_config),
     Path(
       host_config
         .domains

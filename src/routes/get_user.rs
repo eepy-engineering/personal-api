@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
   Json,
   extract::{Path, State},
@@ -28,7 +26,7 @@ pub struct UserAggregate<'a> {
 }
 
 pub async fn get_user(
-  State(handler_config): State<Arc<HandlerConfig>>,
+  State(handler_config): State<&'static HandlerConfig>,
   Path(path): Path<String>,
 ) -> Response {
   let Some(user) = handler_config.config.users.get(&path) else {

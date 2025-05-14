@@ -4,7 +4,7 @@ pub mod host_config;
 mod host_rerouter;
 pub mod routes;
 
-use std::{fs::read_to_string, sync::Arc};
+use std::fs::read_to_string;
 
 use axum::{
   Router, ServiceExt,
@@ -25,14 +25,14 @@ async fn main() -> anyhow::Result<()> {
     .nth(1)
     .expect("no config was provided as an argument");
   let config = read_to_string(config_arg).expect("failed to read config");
-  let config = Arc::new(toml::from_str(&config).expect("failed to parse config"));
+  let config = &*Box::leak(toml::from_str(&config).expect("failed to parse config"));
 
   fetchers::discord::run_discord_bot(&config).await?;
   fetchers::last_fm::run(&config).await;
   fetchers::steam::run(&config).await;
 
-  let handler_config = Arc::new(HandlerConfig::new(&config));
-  let middleware = middleware::from_fn_with_state(handler_config.clone(), host_rerouter);
+  let handler_config = &*Box::leak(Box::new(HandlerConfig::new(&config)));
+  let middleware = middleware::from_fn_with_state(handler_config, host_rerouter);
 
   let app = Router::new()
     .route("/", get(root_page))

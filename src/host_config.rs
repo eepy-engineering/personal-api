@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::config::Config;
 
 pub struct HandlerConfig {
-  pub config: Arc<Config>,
+  pub config: &'static Config,
   pub domains: HashMap<String, DomainEntry>,
 }
 
@@ -12,7 +12,7 @@ pub struct DomainEntry {
 }
 
 impl HandlerConfig {
-  pub fn new(config: &Arc<Config>) -> Self {
+  pub fn new(config: &'static Config) -> Self {
     let domains = config
       .users
       .iter()
@@ -29,7 +29,7 @@ impl HandlerConfig {
       .collect();
 
     HandlerConfig {
-      config: config.clone(),
+      config: config,
       domains,
     }
   }
