@@ -13,7 +13,7 @@ use crate::config::Config;
 
 #[derive(Clone, Serialize)]
 pub struct SteamUserInfo {
-  steam_id: u64,
+  steam_id: String,
   persona_name: String,
   game: Option<SteamGameInfo>,
 }
@@ -104,7 +104,7 @@ pub async fn run(config: &Config) {
           user_info.insert(
             player.steam_id.into_u64(),
             SteamUserInfo {
-              steam_id: player.steam_id.into_u64(),
+              steam_id: player.steam_id.into_u64().to_string(),
               persona_name: player.persona_name,
               game: game_name,
             },
