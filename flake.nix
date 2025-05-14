@@ -6,12 +6,14 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    crane.url = "github:ipetkov/crane";
   };
   outputs = {
     self,
     nixpkgs,
     flake-utils,
     fenix,
+    crane,
   }:
     flake-utils.lib.eachDefaultSystem
     (
@@ -24,6 +26,15 @@
           file = ./rust-toolchain.toml;
           sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
         };
+        craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
+        commonArgs = {
+          src = craneLib.cleanCargoSource ./.;
+          strictDeps = true;
+        };
+        crate = craneLib.buildPackage (commonArgs
+          // {
+            cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+          });
       in
         with pkgs; {
           formatter = alejandra;
@@ -31,6 +42,24 @@
             buildInputs = [
               toolchain
             ];
+          };
+
+          packages = with pkgs; rec {
+            default = crate;
+            pushDockerImage = writeShellScriptBin "push-docker-image" ''
+              sudo ${docker}/bin/docker image load -i ${dockerImage}
+              sudo ${docker}/bin/docker push kokuzo.tailc38f.ts.net/personal-api:latest
+            '';
+            dockerImage = pkgs.dockerTools.buildLayeredImage {
+              name = "kokuzo.tailc38f.ts.net/personal-api";
+              tag = "latest";
+              config = {
+                Entrypoint = ["${default}/bin/personal-api"];
+                ExposedPorts = {
+                  "3000 su/tcp" = {};
+                };
+              };
+            };
           };
         }
     );

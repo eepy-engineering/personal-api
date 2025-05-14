@@ -15,10 +15,10 @@ struct MinimalUser {
 
 impl MinimalUser {
   pub fn from_username(config: &Config, username: &str) -> Option<Self> {
-    let owner = config.users.get(username)?;
+    let user = config.users.get(username)?;
 
     Some(Self {
-      name: owner.name.clone(),
+      name: user.name.clone(),
       username: username.to_owned(),
     })
   }

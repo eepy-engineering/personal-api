@@ -18,7 +18,7 @@ use super::MinimalUser;
 #[derive(Serialize)]
 pub struct UserAggregate {
   name: String,
-  owner: Option<MinimalUser>,
+  owners: Vec<MinimalUser>,
   discord: Option<discord::SimpleUserPresence>,
   last_fm: Option<last_fm::UserInfo>,
 }
@@ -33,10 +33,11 @@ pub async fn get_user(
 
   Json(UserAggregate {
     name: user.name.clone(),
-    owner: user
-      .owner_username
-      .clone()
-      .and_then(|username| MinimalUser::from_username(&handler_config.config, &username)),
+    owners: user
+      .owner_usernames
+      .iter()
+      .filter_map(|username| MinimalUser::from_username(&handler_config.config, &username))
+      .collect(),
     discord: user.discord_id.and_then(discord::fetch_user_presence),
     last_fm: user
       .last_fm_username

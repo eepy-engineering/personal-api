@@ -7,7 +7,8 @@ pub async fn root_page() -> Json<Value> {
     "here are our routes": {
       "/": "root page",
       "/users": "a summary of all the available users",
-      "/users/<username>": "the information about a specific user"
+      "/user": "the information about a specific user, if the site is being accessed from a user's domain",
+      "/user/<username>": "the information about a specific user"
     }
   }))
 }

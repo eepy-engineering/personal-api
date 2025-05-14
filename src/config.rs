@@ -16,7 +16,8 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 pub struct UserConfig {
   pub name: String,
-  pub owner_username: Option<String>,
+  #[serde(default)]
+  pub owner_usernames: Vec<String>,
   pub domain: Option<String>,
 
   pub discord_id: Option<u64>,
