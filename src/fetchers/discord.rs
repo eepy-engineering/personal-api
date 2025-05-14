@@ -174,6 +174,21 @@ impl EventHandler for Handler {
 
   async fn guild_members_chunk(&self, ctx: Context, chunk: GuildMembersChunkEvent) {
     info!("got guild chunk");
+    // prevent USERS guard from making the function !Send
+    {
+      let mut users = USERS.write().unwrap();
+      for member in chunk.members.values() {
+        users
+          .entry(member.user.id.get())
+          .or_insert_with(|| DiscordUserInfo {
+            display_name: member.user.display_name().to_owned(),
+            status: OnlineStatus::Offline,
+            client_status: None,
+            custom_status: None,
+          });
+      }
+    }
+
     for presence in chunk.presences.into_iter().flatten() {
       self.presence_update(ctx.clone(), presence).await;
     }
