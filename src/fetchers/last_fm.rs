@@ -4,16 +4,17 @@ use std::{
   time::Duration,
 };
 
-use chrono::{DateTime, Utc};
-use futures::{FutureExt, StreamExt, TryFutureExt, future::join_all};
-use lastfm::{artist::Artist, imageset::ImageSet, track::RecordedTrack};
-use serde::Serialize;
+use chrono::{DateTime, SubsecRound, Utc};
+use futures::{FutureExt, TryFutureExt, future::join_all};
+use lastfm::{artist::Artist, imageset::ImageSet, track::Track};
+use reqwest::Response;
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::config::Config;
 
 #[allow(unused)]
-#[derive(Serialize, TS)]
+#[derive(Clone, Serialize, TS, PartialEq, Eq)]
 #[ts(rename = "LastFmImageSet")]
 pub struct TypescriptImageSet {
   pub small: Option<String>,
@@ -23,7 +24,7 @@ pub struct TypescriptImageSet {
 }
 
 #[allow(unused)]
-#[derive(Serialize, TS)]
+#[derive(Clone, Serialize, TS, PartialEq, Eq)]
 #[ts(rename = "LastFmArtist")]
 pub struct TypescriptArtist {
   #[ts(as = "TypescriptImageSet")]
@@ -32,9 +33,9 @@ pub struct TypescriptArtist {
   pub url: String,
 }
 #[allow(unused)]
-#[derive(Serialize, TS)]
+#[derive(Clone, Serialize, TS, PartialEq, Eq)]
 #[ts(rename = "LastFmTrack")]
-pub struct TypescriptRecordedTrack {
+pub struct TypescriptTrack {
   #[ts(as = "TypescriptArtist")]
   pub artist: Artist,
   pub name: String,
@@ -42,15 +43,14 @@ pub struct TypescriptRecordedTrack {
   pub image: ImageSet,
   pub album: String,
   pub url: String,
-  pub date: DateTime<Utc>,
+  pub start_time: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, TS)]
 #[ts(rename = "LastFmUserInfo")]
 pub struct UserInfo {
   username: String,
-  #[ts(as = "Option<TypescriptRecordedTrack>")]
-  currently_playing: Option<RecordedTrack>, // todo: start time on now playing track
+  currently_playing: Option<TypescriptTrack>,
 }
 
 static PLAYING_TRACKS: LazyLock<RwLock<HashMap<String, UserInfo>>> =
@@ -62,7 +62,6 @@ pub fn fetch_lastfm_info(username: &str) -> Option<UserInfo> {
 
 struct User {
   username: String,
-  client: lastfm::Client<String, String>,
 }
 
 pub async fn run(config: &'static Config) {
@@ -92,14 +91,8 @@ pub async fn run(config: &'static Config) {
     .filter_map(|config| {
       let last_fm_username = config.last_fm_username.clone()?;
 
-      let client = lastfm::Client::builder()
-        .api_key(last_fm_key.clone())
-        .username(last_fm_username.clone())
-        .build();
-
       Some(User {
         username: last_fm_username,
-        client,
       })
     })
     .collect::<Vec<_>>();
@@ -108,7 +101,7 @@ pub async fn run(config: &'static Config) {
     join_all(
       users
         .iter()
-        .map(|user| update_currently_listening(&user.username, &user.client)),
+        .map(|user| update_currently_listening(&user.username, &last_fm_key)),
     )
     .map(drop)
     .await;
@@ -126,31 +119,46 @@ pub async fn run(config: &'static Config) {
   tracing::info!("started last.fm fetcher");
 }
 
-pub async fn update_currently_listening(username: &str, client: &lastfm::Client<String, String>) {
-  // match reqwest::get(url)
-  //   .and_then(Response::json::<RecentTracksBase>)
-  //   .await
-  let a = client
-    .now_playing()
-    .and_then(async |current_track| {
-      if let Some(current_track) = current_track {
-        let recorded_tracks = client.clone().recent_tracks(None, None).await?;
-        let mut tracks = std::pin::pin!(recorded_tracks.into_stream());
-        if let Some(Ok(track)) = tracks.next().await {
-          if current_track.url == track.url {
-            return Ok(Some(track));
-          }
-        }
-      }
+#[derive(Deserialize)]
+struct RecentTracksBase {
+  #[serde(rename = "recenttracks")]
+  recent_tracks: RecentTracks,
+}
 
-      return Ok(None);
-    })
-    .await;
-  match a {
-    Ok(currently_playing) => {
+#[derive(Deserialize)]
+struct RecentTracks {
+  track: Vec<Track>,
+}
+
+pub async fn update_currently_listening(username: &str, api_key: &str) {
+  let result = reqwest::get(format!("https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&extended=1&user={username}&format=json&api_key={api_key}&limit=1"))
+  .and_then(Response::json::<RecentTracksBase>)
+  .await;
+  match result {
+    Ok(response) => {
+      let currently_playing = response.recent_tracks.track.into_iter().find_map(|track| {
+        let Track::NowPlaying(now_playing) = track else {
+          return None;
+        };
+        Some(now_playing)
+      });
       let mut users = PLAYING_TRACKS.write().unwrap();
       if let Some(user) = users.get_mut(username) {
-        user.currently_playing = currently_playing;
+        user.currently_playing = currently_playing.map(|track| {
+          let start_time = user
+            .currently_playing
+            .as_ref()
+            .map(|track| track.start_time)
+            .unwrap_or(Utc::now().round_subsecs(0));
+          TypescriptTrack {
+            start_time,
+            name: track.name,
+            album: track.album,
+            url: track.url,
+            artist: track.artist,
+            image: track.image,
+          }
+        });
       }
     }
     Err(error) => {

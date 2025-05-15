@@ -2,4 +2,4 @@
 import type { LastFmArtist } from "./LastFmArtist";
 import type { LastFmImageSet } from "./LastFmImageSet";
 
-export type LastFmTrack = { artist: LastFmArtist, name: string, image: LastFmImageSet, album: string, url: string, date: string, };
+export type LastFmTrack = { artist: LastFmArtist, name: string, image: LastFmImageSet, album: string, url: string, start_time: string, };
