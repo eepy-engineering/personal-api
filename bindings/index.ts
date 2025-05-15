@@ -1,0 +1,12 @@
+import type { User } from "./User.ts";
+import type { SteamUserInfo } from "./SteamUserInfo.ts";
+import type { SteamGameInfo } from "./SteamGameInfo.ts";
+import type { MinimalUser } from "./MinimalUser.ts";
+import type { LastFmUserInfo } from "./LastFmUserInfo.ts";
+import type { LastFmTrack } from "./LastFmTrack.ts";
+import type { LastFmArtist } from "./LastFmArtist.ts";
+import type { LastFmImageSet } from "./LastFmImageSet.ts";
+import type { DiscordUserInfo } from "./DiscordUserInfo.ts";
+import type { DiscordOnlineStatus } from "./DiscordOnlineStatus.ts";
+import type { DiscordCustomStatus } from "./DiscordCustomStatus.ts";
+import type { DiscordEmoji } from "./DiscordEmoji.ts";

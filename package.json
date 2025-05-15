@@ -1,0 +1,17 @@
+{
+  "name": "personal-api",
+  "version": "1.0.0",
+  "description": "",
+  "types": "out/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "preinstall": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.10.0",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

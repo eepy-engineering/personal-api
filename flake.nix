@@ -51,6 +51,8 @@
           devShells.default = mkShell rec {
             buildInputs = [
               pkgs.fenix.stable.completeToolchain
+              pnpm
+              nodejs_22
             ];
           };
 
