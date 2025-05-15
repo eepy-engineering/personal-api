@@ -6,7 +6,11 @@ use std::{
 
 use chrono::{DateTime, SubsecRound, Utc};
 use futures::{FutureExt, TryFutureExt, future::join_all};
-use lastfm::{artist::Artist, imageset::ImageSet, track::Track};
+use lastfm::{
+  artist::Artist,
+  imageset::ImageSet,
+  track::{NowPlayingTrack, Track},
+};
 use reqwest::Response;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -14,7 +18,7 @@ use ts_rs::TS;
 use crate::config::Config;
 
 #[allow(unused)]
-#[derive(Clone, Serialize, TS, PartialEq, Eq)]
+#[derive(Clone, Serialize, TS)]
 #[ts(rename = "LastFmImageSet")]
 pub struct TypescriptImageSet {
   pub small: Option<String>,
@@ -24,7 +28,7 @@ pub struct TypescriptImageSet {
 }
 
 #[allow(unused)]
-#[derive(Clone, Serialize, TS, PartialEq, Eq)]
+#[derive(Clone, Serialize, TS)]
 #[ts(rename = "LastFmArtist")]
 pub struct TypescriptArtist {
   #[ts(as = "TypescriptImageSet")]
@@ -33,7 +37,7 @@ pub struct TypescriptArtist {
   pub url: String,
 }
 #[allow(unused)]
-#[derive(Clone, Serialize, TS, PartialEq, Eq)]
+#[derive(Clone, Serialize, TS)]
 #[ts(rename = "LastFmTrack")]
 pub struct TypescriptTrack {
   #[ts(as = "TypescriptArtist")]
@@ -44,6 +48,16 @@ pub struct TypescriptTrack {
   pub album: String,
   pub url: String,
   pub start_time: DateTime<Utc>,
+}
+
+impl PartialEq<NowPlayingTrack> for TypescriptTrack {
+  fn eq(&self, other: &NowPlayingTrack) -> bool {
+    self.artist == other.artist
+      && self.name == other.name
+      && self.image == other.image
+      && self.album == other.album
+      && self.url == other.url
+  }
 }
 
 #[derive(Clone, Serialize, TS)]
@@ -148,8 +162,10 @@ pub async fn update_currently_listening(username: &str, api_key: &str) {
           let start_time = user
             .currently_playing
             .as_ref()
+            .filter(|previous| **previous == track)
             .map(|track| track.start_time)
-            .unwrap_or(Utc::now().round_subsecs(0));
+            .unwrap_or_else(|| Utc::now().round_subsecs(0));
+
           TypescriptTrack {
             start_time,
             name: track.name,
