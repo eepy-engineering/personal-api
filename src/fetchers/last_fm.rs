@@ -4,8 +4,9 @@ use std::{
   time::Duration,
 };
 
-use futures::{FutureExt, future::join_all};
-use lastfm::{artist::Artist, imageset::ImageSet, track::NowPlayingTrack};
+use chrono::{DateTime, Utc};
+use futures::{future::join_all, FutureExt, StreamExt, TryFutureExt};
+use lastfm::{artist::Artist, imageset::ImageSet, track::{NowPlayingTrack, RecordedTrack}};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -30,11 +31,10 @@ pub struct TypescriptArtist {
   pub name: String,
   pub url: String,
 }
-
 #[allow(unused)]
 #[derive(Serialize, TS)]
 #[ts(rename = "LastFmTrack")]
-pub struct TypescriptNowPlayingTrack {
+pub struct TypescriptRecordedTrack {
   #[ts(as = "TypescriptArtist")]
   pub artist: Artist,
   pub name: String,
@@ -42,14 +42,15 @@ pub struct TypescriptNowPlayingTrack {
   pub image: ImageSet,
   pub album: String,
   pub url: String,
+  pub date: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, TS)]
 #[ts(rename = "LastFmUserInfo")]
 pub struct UserInfo {
   username: String,
-  #[ts(as = "Option<TypescriptNowPlayingTrack>")]
-  currently_playing: Option<NowPlayingTrack>,
+  #[ts(as = "Option<TypescriptRecordedTrack>")]
+  currently_playing: Option<RecordedTrack>
   // todo: start time on now playing track
 }
 
@@ -80,6 +81,7 @@ pub async fn run(config: &'static Config) {
         UserInfo {
           username: last_fm_username,
           currently_playing: None,
+          // currently_playing_recorded: None,
         },
       ))
     })
@@ -129,7 +131,20 @@ pub async fn update_currently_listening(username: &str, client: &lastfm::Client<
   // match reqwest::get(url)
   //   .and_then(Response::json::<RecentTracksBase>)
   //   .await
-  match client.now_playing().await {
+  let a = client.now_playing().and_then(async |current_track| {
+    if let Some(current_track) = current_track {
+      let recorded_tracks = client.clone().recent_tracks(None, None).await?;
+      let mut tracks = std::pin::pin!(recorded_tracks.into_stream());
+      if let Some(Ok(track)) = tracks.next().await {
+        if current_track.url == track.url {
+          return Ok(Some(track))
+        }
+      }
+    }
+
+    return Ok(None)
+  }).await;
+  match a {
     Ok(currently_playing) => {
       let mut users = PLAYING_TRACKS.write().unwrap();
       if let Some(user) = users.get_mut(username) {
