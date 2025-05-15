@@ -5,8 +5,8 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use futures::{future::join_all, FutureExt, StreamExt, TryFutureExt};
-use lastfm::{artist::Artist, imageset::ImageSet, track::{NowPlayingTrack, RecordedTrack}};
+use futures::{FutureExt, StreamExt, TryFutureExt, future::join_all};
+use lastfm::{artist::Artist, imageset::ImageSet, track::RecordedTrack};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -50,8 +50,7 @@ pub struct TypescriptRecordedTrack {
 pub struct UserInfo {
   username: String,
   #[ts(as = "Option<TypescriptRecordedTrack>")]
-  currently_playing: Option<RecordedTrack>
-  // todo: start time on now playing track
+  currently_playing: Option<RecordedTrack>, // todo: start time on now playing track
 }
 
 static PLAYING_TRACKS: LazyLock<RwLock<HashMap<String, UserInfo>>> =
@@ -131,19 +130,22 @@ pub async fn update_currently_listening(username: &str, client: &lastfm::Client<
   // match reqwest::get(url)
   //   .and_then(Response::json::<RecentTracksBase>)
   //   .await
-  let a = client.now_playing().and_then(async |current_track| {
-    if let Some(current_track) = current_track {
-      let recorded_tracks = client.clone().recent_tracks(None, None).await?;
-      let mut tracks = std::pin::pin!(recorded_tracks.into_stream());
-      if let Some(Ok(track)) = tracks.next().await {
-        if current_track.url == track.url {
-          return Ok(Some(track))
+  let a = client
+    .now_playing()
+    .and_then(async |current_track| {
+      if let Some(current_track) = current_track {
+        let recorded_tracks = client.clone().recent_tracks(None, None).await?;
+        let mut tracks = std::pin::pin!(recorded_tracks.into_stream());
+        if let Some(Ok(track)) = tracks.next().await {
+          if current_track.url == track.url {
+            return Ok(Some(track));
+          }
         }
       }
-    }
 
-    return Ok(None)
-  }).await;
+      return Ok(None);
+    })
+    .await;
   match a {
     Ok(currently_playing) => {
       let mut users = PLAYING_TRACKS.write().unwrap();
