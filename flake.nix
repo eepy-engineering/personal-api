@@ -58,13 +58,15 @@
 
           packages = with pkgs; rec {
             default = crate;
-            pushDockerImage = writeShellScriptBin "push-docker-image" ''
-              sudo ${docker}/bin/docker image load -i ${dockerImage}
-              sudo ${docker}/bin/docker push kokuzo.tailc38f.ts.net/personal-api:latest
+
+            pushDockerImageActions = writeShellScriptBin "push-docker-image" ''
+              echo "pushing ${self.rev}"
+              push-docker-image ${dockerImage}
             '';
+
             dockerImage = pkgs.dockerTools.buildLayeredImage {
               name = "kokuzo.tailc38f.ts.net/personal-api";
-              tag = "latest";
+              tag = self.rev;
               config = {
                 Entrypoint = ["${default}/bin/personal-api"];
                 ExposedPorts = {
