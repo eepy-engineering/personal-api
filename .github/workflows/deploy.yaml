@@ -1,7 +1,8 @@
 name: Nix Flake action
 on:
-  pull_request:
   push:
+    branches:
+      - main
 jobs:
   nix-build:
     name: upload-docker-image
