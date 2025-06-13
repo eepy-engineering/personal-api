@@ -12,13 +12,10 @@ use crate::{
   host_config::HandlerConfig,
 };
 
-use super::MinimalUser;
-
 #[derive(Serialize, TS)]
 #[ts(export, rename = "User")]
 pub struct UserAggregate<'a> {
   name: &'a str,
-  owners: Vec<MinimalUser>,
   aliases: &'a Vec<String>,
   pronouns: &'a Vec<String>,
   time_zone: &'a str,
@@ -37,11 +34,6 @@ pub async fn get_user(
 
   Json(UserAggregate {
     name: &user.name,
-    owners: user
-      .owner_usernames
-      .iter()
-      .filter_map(|username| MinimalUser::from_username(&handler_config.config, &username))
-      .collect(),
     aliases: &user.aliases,
     pronouns: &user.pronouns,
     time_zone: &user.time_zone,

@@ -15,6 +15,7 @@ struct MinimalUser {
 }
 
 impl MinimalUser {
+  #[allow(unused)]
   pub fn from_username(config: &Config, username: &str) -> Option<Self> {
     let user = config.users.get(username)?;
 

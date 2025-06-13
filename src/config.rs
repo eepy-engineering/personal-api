@@ -17,8 +17,6 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 pub struct UserConfig {
   pub name: String,
-  #[serde(default)]
-  pub owner_usernames: Vec<String>,
   pub aliases: Vec<String>,
   pub pronouns: Vec<String>,
   pub time_zone: String,
