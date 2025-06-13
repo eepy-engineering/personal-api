@@ -25,6 +25,7 @@ async fn main() -> anyhow::Result<()> {
   fetchers::discord::run_discord_bot(&config).await?;
   fetchers::last_fm::run(&config).await;
   fetchers::steam::run(&config).await;
+  fetchers::icloud::run(&config);
 
   let handler_config = &*Box::leak(Box::new(HandlerConfig::new(&config)));
   let middleware = mw::from_fn_with_state(handler_config, middleware::host_rerouter);

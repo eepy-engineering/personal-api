@@ -1,0 +1,15 @@
+meta {
+  name: icloud
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://shared-mac-studio:1234/api/v1/icloud/findmy/devices?password={{blubbles-server-pass}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  password: {{blubbles-server-pass}}
+}
