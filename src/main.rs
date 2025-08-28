@@ -12,6 +12,7 @@ use routes::{
   get_host_user::get_host_user, get_user::get_user, get_users::get_users, root::root_page,
 };
 use tower::Layer;
+use tracing::debug;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -21,6 +22,8 @@ async fn main() -> anyhow::Result<()> {
     .expect("no config was provided as an argument");
   let config = read_to_string(config_arg).expect("failed to read config");
   let config = &*Box::leak(toml::from_str(&config).expect("failed to parse config"));
+
+  debug!("starting up fetchers");
 
   fetchers::discord::run_discord_bot(&config).await?;
   fetchers::last_fm::run(&config).await;

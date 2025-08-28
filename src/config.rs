@@ -1,6 +1,9 @@
 use std::{borrow::Cow, collections::HashMap};
 
-use axum_extra::{headers::{authorization::Bearer, Authorization}, TypedHeader};
+use axum_extra::{
+  TypedHeader,
+  headers::{Authorization, authorization::Bearer},
+};
 use serde::{Deserialize, Serialize};
 use steam_rs::steam_id::SteamId;
 
@@ -36,13 +39,16 @@ pub struct AuthConfig {
   pub scopes: Vec<String>,
 }
 
-pub fn scopes_from_bearer(bearer: Option<TypedHeader<Authorization<Bearer>>>, config: &'static Config) -> Cow<'static, [String]> {
+pub fn scopes_from_bearer(
+  bearer: Option<TypedHeader<Authorization<Bearer>>>,
+  config: &'static Config,
+) -> Cow<'static, [String]> {
   bearer
     .and_then(|auth| config.auth.get(auth.0.token()))
     .map(|auth| Cow::<'static, [String]>::Borrowed(&auth.scopes))
     .unwrap_or_default()
 }
 
-pub fn has_scope(auth_scopes: &Cow<[String]>, scope: &'static str) -> bool{
+pub fn has_scope(auth_scopes: &Cow<[String]>, scope: &'static str) -> bool {
   auth_scopes.iter().any(|s| scope == s)
 }

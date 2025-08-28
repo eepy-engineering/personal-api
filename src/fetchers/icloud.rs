@@ -36,7 +36,7 @@ struct DeviceInfo {
 static DEVICE_INFO: LazyLock<RwLock<HashMap<String, DeviceInfo>>> = LazyLock::new(RwLock::default);
 static FINDER: LazyLock<DefaultFinder> = LazyLock::new(DefaultFinder::new);
 
-pub fn get_user_info(device_id: &str, auth_scopes: Cow<'static, [String]>) -> Option<Location> {
+pub fn get_user_info(device_id: &str, auth_scopes: &Cow<'static, [String]>) -> Option<Location> {
   DEVICE_INFO
     .read()
     .unwrap()

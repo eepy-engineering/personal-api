@@ -1,11 +1,7 @@
-use std::{
-  collections::HashMap,
-  sync::{LazyLock, RwLock},
-  time::Duration,
-};
+use std::{borrow::Cow, collections::HashMap, sync::LazyLock, time::Duration};
 
-use chrono::{DateTime, SubsecRound, Utc};
-use futures::{FutureExt, TryFutureExt, future::join_all};
+use chrono::{DateTime, Local, SubsecRound, Utc};
+use futures::TryFutureExt;
 use lastfm::{
   artist::Artist,
   imageset::ImageSet,
@@ -13,9 +9,11 @@ use lastfm::{
 };
 use reqwest::Response;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
+use tracing::debug;
 use ts_rs::TS;
 
-use crate::config::Config;
+use crate::config::{Config, has_scope};
 
 #[allow(unused)]
 #[derive(Clone, Serialize, TS)]
@@ -64,14 +62,23 @@ impl PartialEq<NowPlayingTrack> for TypescriptTrack {
 #[ts(rename = "LastFmUserInfo")]
 pub struct UserInfo {
   username: String,
+  last_song_time: Option<DateTime<Local>>,
   currently_playing: Option<TypescriptTrack>,
 }
 
-static PLAYING_TRACKS: LazyLock<RwLock<HashMap<String, UserInfo>>> =
-  LazyLock::new(Default::default);
+static PLAYING_TRACKS: LazyLock<Mutex<HashMap<String, UserInfo>>> = LazyLock::new(Default::default);
 
-pub fn fetch_lastfm_info(username: &str) -> Option<UserInfo> {
-  PLAYING_TRACKS.read().unwrap().get(username).cloned()
+pub fn fetch_lastfm_info(username: &str, auth_scopes: &Cow<'static, [String]>) -> Option<UserInfo> {
+  PLAYING_TRACKS
+    .blocking_lock()
+    .get(username)
+    .cloned()
+    .map(|mut user| {
+      user
+        .last_song_time
+        .take_if(|_| !has_scope(&auth_scopes, "lastfm.lasttime"));
+      user
+    })
 }
 
 struct User {
@@ -83,7 +90,7 @@ pub async fn run(config: &'static Config) {
     return;
   };
 
-  *PLAYING_TRACKS.write().unwrap() = config
+  *PLAYING_TRACKS.lock().await = config
     .users
     .values()
     .filter_map(|config| {
@@ -92,6 +99,7 @@ pub async fn run(config: &'static Config) {
         last_fm_username.to_owned(),
         UserInfo {
           username: last_fm_username,
+          last_song_time: None,
           currently_playing: None,
           // currently_playing_recorded: None,
         },
@@ -112,20 +120,16 @@ pub async fn run(config: &'static Config) {
     .collect::<Vec<_>>();
 
   let perform_update = async move || {
-    join_all(
-      users
-        .iter()
-        .map(|user| update_currently_listening(&user.username, &last_fm_key)),
-    )
-    .map(drop)
-    .await;
+    for user in &users {
+      update_currently_listening(&user.username, &last_fm_key).await;
+    }
   };
 
   perform_update().await;
 
   tokio::spawn(async move {
     loop {
-      tokio::time::sleep(Duration::from_secs(10)).await;
+      tokio::time::sleep(Duration::from_secs(15)).await;
       perform_update().await
     }
   });
@@ -152,11 +156,12 @@ pub async fn update_currently_listening(username: &str, api_key: &str) {
     Ok(response) => {
       let currently_playing = response.recent_tracks.track.into_iter().find_map(|track| {
         let Track::NowPlaying(now_playing) = track else {
+          debug!("{username} is not listening to music");
           return None;
         };
         Some(now_playing)
       });
-      let mut users = PLAYING_TRACKS.write().unwrap();
+      let mut users = PLAYING_TRACKS.lock().await;
       if let Some(user) = users.get_mut(username) {
         user.currently_playing = currently_playing.map(|track| {
           let start_time = user
@@ -175,6 +180,7 @@ pub async fn update_currently_listening(username: &str, api_key: &str) {
             image: track.image,
           }
         });
+        user.last_song_time = Some(Local::now());
       }
     }
     Err(error) => {

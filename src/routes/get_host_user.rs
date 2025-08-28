@@ -3,7 +3,11 @@ use axum::{
   extract::{Path, State},
   response::Response,
 };
-use axum_extra::{extract::Host, headers::{authorization::Bearer, Authorization}, TypedHeader};
+use axum_extra::{
+  TypedHeader,
+  extract::Host,
+  headers::{Authorization, authorization::Bearer},
+};
 
 use crate::host_config::HandlerConfig;
 
@@ -25,7 +29,7 @@ pub async fn get_host_user(
         .cloned()
         .unwrap_or_default(),
     ),
-    auth
+    auth,
   )
   .await
 }

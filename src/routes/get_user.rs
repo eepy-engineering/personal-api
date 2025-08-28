@@ -44,7 +44,7 @@ pub async fn get_user(
     .icloud_device_id
     .as_ref()
     .map(String::as_str)
-    .and_then(|id| icloud::get_user_info(id, auth_scopes));
+    .and_then(|id| icloud::get_user_info(id, &auth_scopes));
 
   Json(UserAggregate {
     name: &user.name,
@@ -59,7 +59,7 @@ pub async fn get_user(
       .last_fm_username
       .as_ref()
       .map(String::as_str)
-      .and_then(last_fm::fetch_lastfm_info),
+      .and_then(|username| last_fm::fetch_lastfm_info(username, &auth_scopes)),
     steam: user.steam_id.and_then(steam::get_user_info),
     location,
   })
