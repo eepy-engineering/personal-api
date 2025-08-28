@@ -68,9 +68,10 @@ pub struct UserInfo {
 
 static PLAYING_TRACKS: LazyLock<Mutex<HashMap<String, UserInfo>>> = LazyLock::new(Default::default);
 
-pub fn fetch_lastfm_info(username: &str, auth_scopes: &Cow<'static, [String]>) -> Option<UserInfo> {
+pub async fn fetch_lastfm_info(username: &str, auth_scopes: &Cow<'static, [String]>) -> Option<UserInfo> {
   PLAYING_TRACKS
-    .blocking_lock()
+    .lock()
+    .await
     .get(username)
     .cloned()
     .map(|mut user| {

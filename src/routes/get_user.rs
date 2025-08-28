@@ -55,11 +55,14 @@ pub async fn get_user(
       .and_then(|location| location.time_zone.take())
       .unwrap_or(&user.time_zone),
     discord: user.discord_id.and_then(discord::fetch_user_info),
-    last_fm: user
+    last_fm: if let Some(username) = user
       .last_fm_username
       .as_ref()
-      .map(String::as_str)
-      .and_then(|username| last_fm::fetch_lastfm_info(username, &auth_scopes)),
+      .map(String::as_str) {
+        last_fm::fetch_lastfm_info(username, &auth_scopes).await
+      } else {
+        None
+      },
     steam: user.steam_id.and_then(steam::get_user_info),
     location,
   })
